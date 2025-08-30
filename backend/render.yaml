@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: shakespearegpt-backend
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: CHECKPOINT_PATH
+        value: /opt/render/project/src/checkpoint.pt
+      - key: TRAIN_TEXT_PATH
+        value: /opt/render/project/src/train.txt
+      - key: DATABASE_URL
+        sync: false  # This will be set manually from Supabase
