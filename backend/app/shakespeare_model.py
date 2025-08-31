@@ -136,9 +136,8 @@ class FeedForward(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(n_embd, 4 * n_embd),  # 256 -> 1024
             nn.GELU(),  # GELU activation as in training
-            nn.Dropout(0.1),  # dropout = 0.1
             nn.Linear(4 * n_embd, n_embd),  # 1024 -> 256
-            nn.Dropout(0.1)  # dropout = 0.1
+            nn.Dropout(0.1)  # dropout = 0.1 (only at the end)
         )
         
     def forward(self, x): 
