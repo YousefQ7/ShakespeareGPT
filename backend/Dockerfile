@@ -14,9 +14,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-# Copy model files from root directory (Railway builds from root)
-COPY checkpoint.pt ./
-COPY train.txt ./
+# Copy model files from parent directory (../checkpoint.pt, ../train.txt)
+COPY ../checkpoint.pt ./
+COPY ../train.txt ./
+
+# Debug: Check file sizes
+RUN ls -lh checkpoint.pt train.txt
+RUN echo "Checkpoint size: $(wc -c < checkpoint.pt) bytes"
+RUN echo "Train text size: $(wc -c < train.txt) bytes"
 
 # Expose port
 EXPOSE 8000
