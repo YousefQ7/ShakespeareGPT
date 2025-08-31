@@ -14,19 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-# List all files in build context
-RUN ls -la
-RUN echo "Build context contents:"
-RUN find . -type f -exec ls -lh {} \;
-
-# Copy model files with better handling for large files
-COPY --chmod=644 checkpoint.pt ./
-COPY --chmod=644 train.txt ./
-
-# Verify file sizes after copy
-RUN ls -lh checkpoint.pt train.txt
-RUN echo "Checkpoint size: $(wc -c < checkpoint.pt) bytes"
-RUN echo "Train text size: $(wc -c < train.txt) bytes"
+# Note: Model files will be mounted by Railway, not copied during build
+# checkpoint.pt and train.txt will be available at runtime
 
 # Expose port
 EXPOSE 8000
