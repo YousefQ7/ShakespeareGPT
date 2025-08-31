@@ -160,13 +160,7 @@ class ShakespeareModel:
         
         # Load checkpoint
         if os.path.exists(checkpoint_path):
-            try:
-                # Try loading with weights_only=True (new PyTorch 2.6+ default)
-                checkpoint = torch.load(checkpoint_path, map_location=self.device, weights_only=True)
-            except Exception:
-                # Fallback to weights_only=False for older model files
-                checkpoint = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
-            
+            checkpoint = torch.load(checkpoint_path, map_location=self.device)
             self.model.load_state_dict(checkpoint["model_state_dict"])
             self.model.eval()
         else:
