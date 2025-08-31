@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-# Copy model files (these will be copied during build)
+# Copy model files from root directory (Railway builds from root)
 COPY checkpoint.pt ./
 COPY train.txt ./
 

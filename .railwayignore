@@ -1,0 +1,19 @@
+# Exclude unnecessary files from Railway build context
+frontend/
+.git/
+.gitignore
+.gitattributes
+README.md
+DEPLOYMENT.md
+deploy_setup.py
+test_setup.py
+start.sh
+*.pyc
+__pycache__/
+.env
+venv/
+node_modules/
+.DS_Store
+*.db
+*.sqlite
+shakespearegpt.db
