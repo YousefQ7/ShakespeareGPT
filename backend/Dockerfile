@@ -14,9 +14,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-# Copy model files from backend directory
-COPY checkpoint.pt ./
-COPY train.txt ./
+# Copy download script
+COPY download_models.py ./
+
+# Download model files during build
+RUN python download_models.py
 
 # Debug: Check file sizes
 RUN ls -lh checkpoint.pt train.txt
