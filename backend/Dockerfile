@@ -14,6 +14,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
+# List all files in build context
+RUN ls -la
+RUN echo "Build context contents:"
+RUN find . -type f -exec ls -lh {} \;
+
 # Copy model files with better handling for large files
 COPY --chmod=644 checkpoint.pt ./
 COPY --chmod=644 train.txt ./
