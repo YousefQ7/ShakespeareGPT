@@ -12,6 +12,7 @@ const GenerationForm = ({ onGenerationComplete, setLoading, loading }) => {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [generatedText, setGeneratedText] = useState('')
   const [error, setError] = useState('')
+  const [progressMessage, setProgressMessage] = useState('')
 
   const handleInputChange = (e) => {
     const { name, value, type } = e.target
@@ -31,15 +32,22 @@ const GenerationForm = ({ onGenerationComplete, setLoading, loading }) => {
     setLoading(true)
     setError('')
     setGeneratedText('')
+    setProgressMessage('Initializing model...')
 
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+      
       const response = await fetch(API_ENDPOINTS.generate, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -48,15 +56,21 @@ const GenerationForm = ({ onGenerationComplete, setLoading, loading }) => {
       const data = await response.json()
       setGeneratedText(data.response)
       onGenerationComplete(data)
+      setProgressMessage('')
       
       // Clear the prompt after successful generation
       setFormData(prev => ({ ...prev, prompt: '' }))
       
     } catch (error) {
       console.error('Generation failed:', error)
-      setError('Failed to generate text. Please try again.')
+      if (error.name === 'AbortError') {
+        setError('Request timed out. The model is taking too long to respond. Try reducing the number of tokens.')
+      } else {
+        setError('Failed to generate text. Please try again.')
+      }
     } finally {
       setLoading(false)
+      setProgressMessage('')
     }
   }
 
@@ -202,6 +216,16 @@ const GenerationForm = ({ onGenerationComplete, setLoading, loading }) => {
           ))}
         </div>
       </div>
+
+      {/* Progress Message */}
+      {progressMessage && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+            <p className="text-blue-800 text-sm">{progressMessage}</p>
+          </div>
+        </div>
+      )}
 
       {/* Error Display */}
       {error && (

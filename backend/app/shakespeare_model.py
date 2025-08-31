@@ -205,6 +205,9 @@ class ShakespeareModel:
         # Encode prompt
         context = torch.tensor([self.encode(prompt)], dtype=torch.long, device=self.device)
         
+        # Limit max_new_tokens for faster response
+        max_new_tokens = min(max_new_tokens, 200)  # Cap at 200 tokens for performance
+        
         # Generate
         with torch.no_grad():
             generated_ids = self.model.generate(
