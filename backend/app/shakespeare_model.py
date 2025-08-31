@@ -160,9 +160,25 @@ class ShakespeareModel:
         
         # Load checkpoint
         if os.path.exists(checkpoint_path):
-            checkpoint = torch.load(checkpoint_path, map_location=self.device)
-            self.model.load_state_dict(checkpoint["model_state_dict"])
-            self.model.eval()
+            try:
+                # Try loading with different map_location strategies
+                checkpoint = torch.load(checkpoint_path, map_location=self.device)
+                self.model.load_state_dict(checkpoint["model_state_dict"])
+                self.model.eval()
+                print(f"✅ Model loaded successfully on {self.device}")
+            except Exception as e:
+                print(f"❌ Error loading model: {e}")
+                print(f"🔍 Trying CPU fallback...")
+                try:
+                    # Fallback to CPU loading
+                    checkpoint = torch.load(checkpoint_path, map_location="cpu")
+                    self.model.load_state_dict(checkpoint["model_state_dict"])
+                    self.model = self.model.to(self.device)
+                    self.model.eval()
+                    print(f"✅ Model loaded successfully on CPU and moved to {self.device}")
+                except Exception as e2:
+                    print(f"❌ CPU fallback also failed: {e2}")
+                    raise e2
         else:
             raise FileNotFoundError(f"Checkpoint not found at {checkpoint_path}")
     

@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 WORKDIR /app
 
@@ -14,11 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-# Copy download script
-COPY download_models.py ./
-
-# Download model files during build
-RUN python download_models.py
+# Copy model files from backend directory
+COPY checkpoint.pt ./
+COPY train.txt ./
 
 # Debug: Check file sizes
 RUN ls -lh checkpoint.pt train.txt
