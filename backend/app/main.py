@@ -3,8 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List
 import os
-import requests
-from pathlib import Path
 
 from .database import get_db, Generation, create_tables
 from .models import GenerationRequest, GenerationResponse, GenerationHistory
@@ -38,9 +36,6 @@ async def startup_event():
     checkpoint_path = os.getenv("CHECKPOINT_PATH", "/app/checkpoint.pt")
     train_text_path = os.getenv("TRAIN_TEXT_PATH", "/app/train.txt")
     
-    # Download model files if they don't exist
-    await download_model_files(checkpoint_path, train_text_path)
-    
     # Debug: Check if files exist
     print(f"🔍 Checking checkpoint path: {checkpoint_path}")
     print(f"🔍 File exists: {os.path.exists(checkpoint_path)}")
@@ -63,34 +58,6 @@ async def startup_event():
     except Exception as e:
         print(f"❌ Error loading model: {e}")
         raise e
-
-async def download_model_files(checkpoint_path: str, train_text_path: str):
-    """Download model files from GitHub if they don't exist."""
-    # GitHub raw URLs for your files
-    checkpoint_url = "https://raw.githubusercontent.com/YousefQ7/ShakespeareGPT/main/backend/checkpoint.pt"
-    train_text_url = "https://raw.githubusercontent.com/YousefQ7/ShakespeareGPT/main/backend/train.txt"
-    
-    # Download checkpoint if needed
-    if not os.path.exists(checkpoint_path):
-        print(f"📥 Downloading checkpoint from {checkpoint_url}")
-        response = requests.get(checkpoint_url, stream=True)
-        response.raise_for_status()
-        
-        with open(checkpoint_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        print(f"✅ Checkpoint downloaded to {checkpoint_path}")
-    
-    # Download train text if needed
-    if not os.path.exists(train_text_path):
-        print(f"📥 Downloading train text from {train_text_url}")
-        response = requests.get(train_text_url, stream=True)
-        response.raise_for_status()
-        
-        with open(train_text_path, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        print(f"✅ Train text downloaded to {train_text_path}")
 
 @app.get("/")
 async def root():

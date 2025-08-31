@@ -14,8 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-# Note: Model files will be mounted by Railway, not copied during build
-# checkpoint.pt and train.txt will be available at runtime
+# Copy model files (these will be copied during build)
+COPY checkpoint.pt ./
+COPY train.txt ./
 
 # Expose port
 EXPOSE 8000
