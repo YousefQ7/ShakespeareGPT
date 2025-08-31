@@ -14,9 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY app/ ./app/
 
-# Copy model files from parent directory (../checkpoint.pt, ../train.txt)
-COPY ../checkpoint.pt ./
-COPY ../train.txt ./
+# Copy model files from backend directory
+COPY checkpoint.pt ./
+COPY train.txt ./
 
 # Debug: Check file sizes
 RUN ls -lh checkpoint.pt train.txt
