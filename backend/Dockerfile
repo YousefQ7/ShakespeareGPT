@@ -18,6 +18,11 @@ COPY app/ ./app/
 COPY --chmod=644 checkpoint.pt ./
 COPY --chmod=644 train.txt ./
 
+# Verify file sizes after copy
+RUN ls -lh checkpoint.pt train.txt
+RUN echo "Checkpoint size: $(wc -c < checkpoint.pt) bytes"
+RUN echo "Train text size: $(wc -c < train.txt) bytes"
+
 # Expose port
 EXPOSE 8000
 

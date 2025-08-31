@@ -1,0 +1,19 @@
+# Exclude unnecessary files from Docker build context
+.git
+.gitignore
+.gitattributes
+README.md
+DEPLOYMENT.md
+deploy_setup.py
+start.sh
+test_setup.py
+frontend/
+*.pyc
+__pycache__/
+.env
+venv/
+node_modules/
+.DS_Store
+*.db
+*.sqlite
+shakespearegpt.db
