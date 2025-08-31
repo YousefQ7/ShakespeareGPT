@@ -8,18 +8,20 @@ class GPTLanguageModel(nn.Module):
     def __init__(self, vocab_size):
         super().__init__()
         # each token directly reads off the logits for the next token from a lookup table
-        self.token_embedding_table = nn.Embedding(vocab_size, 384)
-        self.position_embedding_table = nn.Embedding(256, 384)
+        self.token_embedding_table = nn.Embedding(vocab_size, 256)  # 256 embedding dimensions
+        self.position_embedding_table = nn.Embedding(256, 256)      # 256 context length
         self.blocks = nn.Sequential(
-            Block(384, n_head=6),
-            Block(384, n_head=6),
-            Block(384, n_head=6),
-            Block(384, n_head=6),
-            Block(384, n_head=6),
-            Block(384, n_head=6),
+            Block(256, n_head=8),  # 8 attention heads
+            Block(256, n_head=8),  # 8 attention heads
+            Block(256, n_head=8),  # 8 attention heads
+            Block(256, n_head=8),  # 8 attention heads
+            Block(256, n_head=8),  # 8 attention heads
+            Block(256, n_head=8),  # 8 attention heads
+            Block(256, n_head=8),  # 8 attention heads
+            Block(256, n_head=8),  # 8 attention heads
         )
-        self.ln_f = nn.LayerNorm(384)  # final layer norm
-        self.lm_head = nn.Linear(384, vocab_size)
+        self.ln_f = nn.LayerNorm(256)  # 256 embedding dimensions
+        self.lm_head = nn.Linear(256, vocab_size)  # 256 embedding dimensions
 
     def forward(self, idx, targets=None):
         B, T = idx.shape
@@ -120,9 +122,9 @@ class FeedFoward(nn.Module):
     def __init__(self, n_embd):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(n_embd, 4 * n_embd, bias=False),
+            nn.Linear(n_embd, 4 * n_embd, bias=False),  # 256 -> 1024
             nn.ReLU(),
-            nn.Linear(4 * n_embd, n_embd, bias=False),
+            nn.Linear(4 * n_embd, n_embd, bias=False),   # 1024 -> 256
         )
 
     def forward(self, x):
