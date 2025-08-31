@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import GenerationForm from './components/GenerationForm'
 import GenerationHistory from './components/GenerationHistory'
 import { BookOpen, Sparkles, History } from 'lucide-react'
+import { API_ENDPOINTS } from './config.js'
 
 function App() {
   const [generations, setGenerations] = useState([])
@@ -14,7 +15,7 @@ function App() {
 
   const loadHistory = async () => {
     try {
-      const response = await fetch('/api/history?limit=50')
+      const response = await fetch(`${API_ENDPOINTS.history}?limit=50`)
       const data = await response.json()
       setGenerations(data)
     } catch (error) {

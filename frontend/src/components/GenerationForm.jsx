@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { Send, Settings, Loader2 } from 'lucide-react'
+import { API_ENDPOINTS } from '../config.js'
 
 const GenerationForm = ({ onGenerationComplete, setLoading, loading }) => {
   const [formData, setFormData] = useState({
@@ -32,7 +33,7 @@ const GenerationForm = ({ onGenerationComplete, setLoading, loading }) => {
     setGeneratedText('')
 
     try {
-      const response = await fetch('/api/generate', {
+      const response = await fetch(API_ENDPOINTS.generate, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
