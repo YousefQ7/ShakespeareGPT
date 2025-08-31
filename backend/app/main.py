@@ -34,7 +34,7 @@ async def startup_event():
     
     # Get paths from environment or use defaults
     checkpoint_path = os.getenv("CHECKPOINT_PATH", "/app/checkpoint.pt")
-    train_text_path = os.getenv("TRAIN_TEXT_PATH", "/app/train.txt")
+    vocab_path = os.getenv("VOCAB_PATH", "/app/vocabulary.pt")
     
     # Debug: Check if files exist
     print(f"🔍 Checking checkpoint path: {checkpoint_path}")
@@ -42,13 +42,13 @@ async def startup_event():
     if os.path.exists(checkpoint_path):
         print(f"🔍 File size: {os.path.getsize(checkpoint_path)} bytes")
     
-    print(f"🔍 Checking train text path: {train_text_path}")
-    print(f"🔍 File exists: {os.path.exists(train_text_path)}")
-    if os.path.exists(train_text_path):
-        print(f"🔍 File size: {os.path.getsize(train_text_path)} bytes")
+    print(f"🔍 Checking vocabulary path: {vocab_path}")
+    print(f"🔍 File exists: {os.path.exists(vocab_path)}")
+    if os.path.exists(vocab_path):
+        print(f"🔍 File size: {os.path.getsize(vocab_path)} bytes")
     
     try:
-        shakespeare_model = ShakespeareModel(checkpoint_path, train_text_path)
+        shakespeare_model = ShakespeareModel(checkpoint_path, vocab_path)
         print("✅ Shakespeare model loaded successfully!")
         
         # Create database tables

@@ -1,113 +1,52 @@
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
+import torch.nn.functional as F
 import os
-
-# Model configuration (must match your trained model)
-n_embd = 256
-n_head = 8
-n_layer = 8
-dropout = 0.1
-block_size = 256
-
-class Head(nn.Module):
-    def __init__(self, head_size):
-        super().__init__()
-        self.key = nn.Linear(n_embd, head_size, bias=False)
-        self.query = nn.Linear(n_embd, head_size, bias=False)
-        self.value = nn.Linear(n_embd, head_size, bias=False)
-        self.register_buffer("tril", torch.tril(torch.ones(block_size, block_size)))
-        self.dropout = nn.Dropout(dropout)
-
-    def forward(self, x):
-        B, T, C = x.shape
-        k = self.key(x)
-        q = self.query(x)
-        wei = q @ k.transpose(-2, -1) * C**-0.5
-        wei = wei.masked_fill(self.tril[:T, :T] == 0, float('-inf'))
-        wei = F.softmax(wei, dim=-1)
-        wei = self.dropout(wei)
-        v = self.value(x)
-        out = wei @ v
-        return out
-
-class MultiHeadAttention(nn.Module):
-    def __init__(self, num_heads, head_size):
-        super().__init__()
-        self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
-        self.proj = nn.Linear(n_embd, n_embd)
-        self.dropout = nn.Dropout(dropout)
-    
-    def forward(self, x):
-        out = torch.cat([h(x) for h in self.heads], dim=-1)
-        out = self.dropout(self.proj(out))
-        return out
-
-class FeedForward(nn.Module):
-    def __init__(self, n_embd):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(n_embd, 4*n_embd),
-            nn.GELU(),
-            nn.Linear(4*n_embd, n_embd),
-            nn.Dropout(dropout)
-        )
-    
-    def forward(self, x):
-        return self.net(x)
-
-class Block(nn.Module):
-    def __init__(self, n_embd, n_head):
-        super().__init__()
-        head_size = n_embd // n_head
-        self.sa = MultiHeadAttention(n_head, head_size)
-        self.ffwd = FeedForward(n_embd)
-        self.ln1 = nn.LayerNorm(n_embd)
-        self.ln2 = nn.LayerNorm(n_embd)
-
-    def forward(self, x):
-        x = x + self.sa(self.ln1(x))
-        x = x + self.ffwd(self.ln2(x))
-        return x
+import math
 
 class GPTLanguageModel(nn.Module):
     def __init__(self, vocab_size):
         super().__init__()
-        self.token_embedding_table = nn.Embedding(vocab_size, n_embd)
-        self.position_embedding_table = nn.Embedding(block_size, n_embd)
-        self.blocks = nn.Sequential(*[Block(n_embd, n_head) for _ in range(n_layer)])
-        self.ln_f = nn.LayerNorm(n_embd)
-        self.lm_head = nn.Linear(n_embd, vocab_size)
+        # each token directly reads off the logits for the next token from a lookup table
+        self.token_embedding_table = nn.Embedding(vocab_size, 384)
+        self.position_embedding_table = nn.Embedding(256, 384)
+        self.blocks = nn.Sequential(
+            Block(384, n_head=6),
+            Block(384, n_head=6),
+            Block(384, n_head=6),
+            Block(384, n_head=6),
+            Block(384, n_head=6),
+            Block(384, n_head=6),
+        )
+        self.ln_f = nn.LayerNorm(384)  # final layer norm
+        self.lm_head = nn.Linear(384, vocab_size)
 
     def forward(self, idx, targets=None):
         B, T = idx.shape
-        tok_emb = self.token_embedding_table(idx)
-        pos_emb = self.position_embedding_table(torch.arange(T, device=idx.device))
+
+        # idx and targets are both (B,T) tensor of integers
+        tok_emb = self.token_embedding_table(idx)  # (B,T,C)
+        pos_emb = self.position_embedding_table(torch.arange(T, device=idx.device))  # (T,C)
         x = tok_emb + pos_emb
         x = self.blocks(x)
         x = self.ln_f(x)
         logits = self.lm_head(x)
+
         if targets is None:
             loss = None
         else:
             B, T, C = logits.shape
-            logits = logits.view(B*T, C)
-            targets = targets.view(B*T)
+            logits = logits.view(B * T, C)
+            targets = targets.view(B * T)
             loss = F.cross_entropy(logits, targets)
+
         return logits, loss
 
-    def generate(
-        self,
-        idx,
-        max_new_tokens,
-        temperature: float = 1.0,
-        top_k: int = None,
-        top_p: float = None,
-    ):
+    def generate(self, idx, max_new_tokens, temperature=1.0, top_k=None, top_p=None):
         """Generate tokens autoregressively."""
         for _ in range(max_new_tokens):
             # crop context to block_size
-            idx_cond = idx[:, -block_size:]
+            idx_cond = idx[:, -256:]
 
             # forward pass
             logits, _ = self(idx_cond)
@@ -142,18 +81,67 @@ class GPTLanguageModel(nn.Module):
 
         return idx
 
+class Block(nn.Module):
+    def __init__(self, n_embd, n_head):
+        super().__init__()
+        head_size = n_embd // n_head
+        self.sa = MultiHeadAttention(n_head, head_size)
+        self.ffwd = FeedFoward(n_embd)
+        self.ln1 = nn.LayerNorm(n_embd)
+        self.ln2 = nn.LayerNorm(n_embd)
+
+    def forward(self, x):
+        x = x + self.sa(self.ln1(x))
+        x = x + self.ffwd(self.ln2(x))
+        return x
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, num_heads, head_size):
+        super().__init__()
+        self.num_heads = num_heads
+        self.head_size = head_size
+        self.n_embd = num_heads * head_size
+        self.c_attn = nn.Linear(self.n_embd, 3 * self.n_embd, bias=False)
+        self.c_proj = nn.Linear(self.n_embd, self.n_embd, bias=False)
+
+    def forward(self, x):
+        B, T, C = x.size()
+        q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
+        k = k.view(B, T, self.num_heads, self.head_size).transpose(1, 2)
+        q = q.view(B, T, self.num_heads, self.head_size).transpose(1, 2)
+        v = v.view(B, T, self.num_heads, self.head_size).transpose(1, 2)
+
+        y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None)
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+        y = self.c_proj(y)
+        return y
+
+class FeedFoward(nn.Module):
+    def __init__(self, n_embd):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(n_embd, 4 * n_embd, bias=False),
+            nn.ReLU(),
+            nn.Linear(4 * n_embd, n_embd, bias=False),
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
 class ShakespeareModel:
-    def __init__(self, checkpoint_path: str, train_text_path: str):
+    def __init__(self, checkpoint_path: str, vocab_path: str):
         self.device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
         
-        # Load vocabulary from training data
-        with open(train_text_path, "r", encoding="utf-8") as f:
-            train_text = f.read()
-        
-        chars = sorted(list(set(train_text)))
-        self.vocab_size = len(chars)
-        self.stoi = {ch: i for i, ch in enumerate(chars)}
-        self.itos = {i: ch for i, ch in enumerate(chars)}
+        # Load vocabulary from vocabulary file
+        if os.path.exists(vocab_path):
+            vocab_data = torch.load(vocab_path, map_location='cpu')
+            self.chars = vocab_data['chars']
+            self.vocab_size = vocab_data['vocab_size']
+            self.stoi = vocab_data['stoi']
+            self.itos = vocab_data['itos']
+            print(f"✅ Vocabulary loaded: {self.vocab_size} characters")
+        else:
+            raise FileNotFoundError(f"Vocabulary file not found at {vocab_path}")
         
         # Initialize model
         self.model = GPTLanguageModel(self.vocab_size).to(self.device)

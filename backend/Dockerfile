@@ -16,12 +16,12 @@ COPY app/ ./app/
 
 # Copy model files from backend directory
 COPY checkpoint.pt ./
-COPY train.txt ./
+COPY vocabulary.pt ./
 
 # Debug: Check file sizes
-RUN ls -lh checkpoint.pt train.txt
+RUN ls -lh checkpoint.pt vocabulary.pt
 RUN echo "Checkpoint size: $(wc -c < checkpoint.pt) bytes"
-RUN echo "Train text size: $(wc -c < train.txt) bytes"
+RUN echo "Vocabulary size: $(wc -c < vocabulary.pt) bytes"
 
 # Expose port
 EXPOSE 8000
