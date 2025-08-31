@@ -87,8 +87,8 @@ class Block(nn.Module):
     def __init__(self, n_embd, n_head):
         super().__init__()
         head_size = n_embd // n_head
-        self.sa = MultiHeadAttention(n_head, head_size)
-        self.ffwd = FeedFoward(n_embd)
+        self.sa = MultiHeadAttention(n_head, head_size)  # n_head, head_size
+        self.ffwd = FeedForward(n_embd)  # Changed from FeedFoward to FeedForward
         self.ln1 = nn.LayerNorm(n_embd)
         self.ln2 = nn.LayerNorm(n_embd)
 
@@ -97,37 +97,51 @@ class Block(nn.Module):
         x = x + self.ffwd(self.ln2(x))
         return x
 
+class Head(nn.Module):
+    def __init__(self, head_size):
+        super().__init__()
+        self.key = nn.Linear(256, head_size, bias=False)  # n_embd = 256
+        self.query = nn.Linear(256, head_size, bias=False)
+        self.value = nn.Linear(256, head_size, bias=False)
+        self.register_buffer("tril", torch.tril(torch.ones(256, 256)))  # block_size = 256
+        self.dropout = nn.Dropout(0.1)  # dropout = 0.1
+
+    def forward(self, x):
+        B, T, C = x.shape
+        k = self.key(x)
+        q = self.query(x)
+        wei = q @ k.transpose(-2, -1) * C**-0.5
+        wei = wei.masked_fill(self.tril[:T, :T] == 0, float('-inf'))
+        wei = F.softmax(wei, dim=-1)
+        wei = self.dropout(wei)
+        v = self.value(x)
+        out = wei @ v
+        return out
+
 class MultiHeadAttention(nn.Module):
     def __init__(self, num_heads, head_size):
         super().__init__()
-        self.num_heads = num_heads
-        self.head_size = head_size
-        self.n_embd = num_heads * head_size
-        self.c_attn = nn.Linear(self.n_embd, 3 * self.n_embd, bias=False)
-        self.c_proj = nn.Linear(self.n_embd, self.n_embd, bias=False)
-
+        self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
+        self.proj = nn.Linear(256, 256)  # n_embd = 256
+        self.dropout = nn.Dropout(0.1)  # dropout = 0.1
+        
     def forward(self, x):
-        B, T, C = x.size()
-        q, k, v = self.c_attn(x).split(self.n_embd, dim=2)
-        k = k.view(B, T, self.num_heads, self.head_size).transpose(1, 2)
-        q = q.view(B, T, self.num_heads, self.head_size).transpose(1, 2)
-        v = v.view(B, T, self.num_heads, self.head_size).transpose(1, 2)
+        out = torch.cat([h(x) for h in self.heads], dim=-1)
+        out = self.dropout(self.proj(out))
+        return out
 
-        y = torch.nn.functional.scaled_dot_product_attention(q, k, v, attn_mask=None)
-        y = y.transpose(1, 2).contiguous().view(B, T, C)
-        y = self.c_proj(y)
-        return y
-
-class FeedFoward(nn.Module):
+class FeedForward(nn.Module):
     def __init__(self, n_embd):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(n_embd, 4 * n_embd, bias=False),  # 256 -> 1024
-            nn.ReLU(),
-            nn.Linear(4 * n_embd, n_embd, bias=False),   # 1024 -> 256
+            nn.Linear(n_embd, 4 * n_embd),  # 256 -> 1024
+            nn.GELU(),  # GELU activation as in training
+            nn.Dropout(0.1),  # dropout = 0.1
+            nn.Linear(4 * n_embd, n_embd),  # 1024 -> 256
+            nn.Dropout(0.1)  # dropout = 0.1
         )
-
-    def forward(self, x):
+        
+    def forward(self, x): 
         return self.net(x)
 
 class ShakespeareModel:
