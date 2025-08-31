@@ -33,8 +33,19 @@ async def startup_event():
     global shakespeare_model
     
     # Get paths from environment or use defaults
-    checkpoint_path = os.getenv("CHECKPOINT_PATH", "../checkpoint.pt")
-    train_text_path = os.getenv("TRAIN_TEXT_PATH", "../train.txt")
+    checkpoint_path = os.getenv("CHECKPOINT_PATH", "/app/checkpoint.pt")
+    train_text_path = os.getenv("TRAIN_TEXT_PATH", "/app/train.txt")
+    
+    # Debug: Check if files exist
+    print(f"🔍 Checking checkpoint path: {checkpoint_path}")
+    print(f"🔍 File exists: {os.path.exists(checkpoint_path)}")
+    if os.path.exists(checkpoint_path):
+        print(f"🔍 File size: {os.path.getsize(checkpoint_path)} bytes")
+    
+    print(f"🔍 Checking train text path: {train_text_path}")
+    print(f"🔍 File exists: {os.path.exists(train_text_path)}")
+    if os.path.exists(train_text_path):
+        print(f"🔍 File size: {os.path.getsize(train_text_path)} bytes")
     
     try:
         shakespeare_model = ShakespeareModel(checkpoint_path, train_text_path)
